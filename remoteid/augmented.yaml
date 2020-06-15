@@ -447,6 +447,7 @@ paths:
       security:
       - AuthFromAuthorizationAuthority:
         - dss.read.identification_service_areas
+        - rid.read.enhanced_details
       summary: /uss/flights/{id}/details
       description: Retrieve details of a flight from a remote ID service provider
         to meet remote ID requirements.
@@ -458,6 +459,16 @@ paths:
         $ref: '#/components/schemas/RIDFlightID'
       in: path
       required: true
+    - name: enhanced
+      description: 'True if the client is requesting enhanced details about the
+        flight.  When true, the access token must include the rid.read.enhanced_details
+        scope, or else access will be forbidden.'
+      schema:
+        type: boolean
+        example: true
+        default: false
+      in: query
+      required: false
   /v1/dss/subscriptions:
     summary: Subscriptions for airspace updates to a volume of interest.
     get:
@@ -1429,7 +1440,8 @@ components:
         operator_location:
           anyOf:
           - $ref: '#/components/schemas/LatLngPoint'
-          description: Location of party controlling the aircraft.
+          description: Location of party controlling the aircraft.  This field is required
+            when the query parameter `enhanced` is set true.
         operation_description:
           description: Free-text field that enables the operator to describe the purpose
             of a flight, if so desired.
@@ -1441,15 +1453,49 @@ components:
         serial_number:
           description: Can be specified when no registration ID exists and required
             by law in a region. This is expressed in the ANSI/CTA-2063-A Physical Serial
-            Number format.
+            Number format.  This field is required when the query parameter `enhanced` is
+            set true and the registration_number field is not provided.
           type: string
           example: INTCJ123-4567-890
         registration_number:
           description: If a CAA provides a method of registering UAS, this number
             is provided by the CAA or its authorized representative.  Required when
-            required by law in a region.
+            required by law in a region.  This field is required when the query parameter
+            `enhanced` is set true and the serial_number field is not provided.
           type: string
           example: FA12345897
+        purpose:
+          description: Human-readable description of the purpose of this flight.
+          type: string
+          example: Newsgathering
+        compliance_details:
+          description: Details of this flight's compliance to various rules.
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceDetail'
+    ComplianceDetail:
+      description: Details about compliance to a particular rule or set of rules.
+      type: object
+      required:
+        - summary
+      properties:
+        summary:
+          description: Brief description of the state of compliance of the flight relative
+            to the rule or set of rules.  Should fill in the blank for the statement, "This
+            flight ___"
+          type: string
+          maxLength: 40
+          example: Is approved to be in TFR
+        details:
+          description: An extended description of the rule and means of compliance to that
+            rule, in human-readable text.
+          type: string
+          example: Operator has waiver XXX to be exempted from the TFR announced in
+            NOTAM 0/YYYY.
+        details_url:
+          description: A URL at which additional details for this compliance may be found.
+          type: string
+          example: https://example.com/flights/XYZ/approval_details
     RIDRecentAircraftPosition:
       description: ""
       required:
@@ -1764,6 +1810,10 @@ components:
             dss.write.identification_service_areas: Client may create, edit, and delete
               Identification Service Areas for remote ID.  A remote ID service provider
               shall be granted this scope upon request.
+            rid.read.enhanced_details: Client may view enhanced details about a flight
+              even if those details would not be shown to the general public.  This
+              scope is not valid by itself; it must be accompanied by
+              dss.read.identification_service_areas in the same access token.
       type: oauth2
       description: |-
         Authorization from, or on behalf of, an authorization authority.  This authority shall issue access tokens that are JSON Web Tokens as defined in RFC 7519, using the `RS256` algorithm for the signature, and publish to all providers the public key for verifying that signature.
@@ -1781,6 +1831,7 @@ security:
 - AuthFromAuthorizationAuthority:
   - dss.read.identification_service_areas
   - dss.write.identification_service_areas
+  - rid.read.enhanced_details
 tags:
 - name: dss
   description: Endpoints exposed by the DSS server.
