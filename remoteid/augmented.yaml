@@ -1442,6 +1442,11 @@ components:
           - $ref: '#/components/schemas/LatLngPoint'
           description: Location of party controlling the aircraft.  This field is required
             when the query parameter `enhanced` is set true.
+        operator_phone_number:
+          type: string
+          description: Phone number to contact the operator.  This field is required when
+            the query parameter `enhanced` is set true.
+          example: 1-800-555-5555
         operation_description:
           description: Free-text field that enables the operator to describe the purpose
             of a flight, if so desired.
